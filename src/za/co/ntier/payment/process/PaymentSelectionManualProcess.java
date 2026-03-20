@@ -5,11 +5,8 @@ import static org.compiere.model.SystemIDs.PROCESS_C_PAYSELECTION_CREATEPAYMENT;
 import static org.compiere.model.SystemIDs.REFERENCE_PAYMENTRULE;
 
 import java.math.BigDecimal;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
 import java.sql.Timestamp;
 import java.util.AbstractMap;
-import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -37,12 +34,12 @@ import org.compiere.process.ProcessInfo;
 import org.compiere.process.ProcessInfoParameter;
 import org.compiere.process.SvrProcess;
 import org.compiere.util.CLogger;
-import org.compiere.util.DB;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
 import org.compiere.util.Trx;
 import org.compiere.util.Util;
 
+import za.co.ntier.api.util.NtierProcessUtil;
 import za.co.ntier.payment.event.delegate.LoginEventDelegate;
 
 @org.adempiere.base.annotation.Process
@@ -89,7 +86,7 @@ public class PaymentSelectionManualProcess extends SvrProcess {
 	@Override
 	protected String doIt() throws Exception {
 
-		Map<String, Map<Object, Object>> selectedRecordsMap = getSelectedRecordsFromTempTable(get_TrxName(), getAD_PInstance_ID());
+		Map<String, Map<Object, Object>> selectedRecordsMap = NtierProcessUtil.getSelectedRecordsFromTempTable(get_TrxName(), getAD_PInstance_ID());
 		m_ps = PaymentSelectionManualProcess.generatePaySelect(
 						selectedRecordsMap, paymentSelectionName, reference, 
 						paymentRule, payDate, bankAccountID, isOnePaymentPerInvoice, 
@@ -206,7 +203,7 @@ public class PaymentSelectionManualProcess extends SvrProcess {
 				line += 10;
 				Map<Object, Object> selectedRow = selectedRecordsEntry.getValue();
 				MPaySelectionLine psl = new MPaySelectionLine (m_ps, line, paymentRule);
-				int C_Invoice_ID = (int)selectedRow.get(TSelectionInfoWindowColumn.ID);
+				int C_Invoice_ID = (int)selectedRow.get(NtierProcessUtil.TSelectionInfoWindowColumn.ID);
 				BigDecimal OpenAmt = (BigDecimal)selectedRow.get(I_C_InvoicePaySchedule.COLUMNNAME_DueAmt);//9
 				BigDecimal DiscountAmt = (BigDecimal)selectedRow.get(I_C_PaySelectionLine.COLUMNNAME_DiscountAmt);//6
 				BigDecimal WriteOffAmt = (BigDecimal)selectedRow.get(I_C_PaySelectionLine.COLUMNNAME_WriteOffAmt);//7
@@ -238,94 +235,6 @@ public class PaymentSelectionManualProcess extends SvrProcess {
 		}
 	}
 	
-	public static enum TSelectionInfoWindowColumn {
-		ID("T_Selection_ID"), 
-		UUID("t_selection_uu"),		
-		VIEW_ID("viewid"),
-		COLUMN_NAME("ColumnName"),
-		VALUE_STR("Value_String"),
-		VALUE_NUM("Value_Number"),
-		VALUE_DATE("Value_Date");
-		
-		private final String columnName; 
-
-		TSelectionInfoWindowColumn(String columnName) {
-	        this.columnName = columnName;
-	    }
-		
-		@Override
-	    public String toString() {
-	        return this.columnName; 
-	    }
-	}
-	
-	public static Map<String, Map<Object, Object>> getSelectedRecordsFromTempTable (String trxName, int pInstanceID){
-		Map<String, Map<Object, Object>> selectionValueMap = new HashMap<>();
-		
-		StringBuilder sql = new StringBuilder();
-		sql.append("SELECT T_Selection_ID, t_selection_uu, viewid, ColumnName, Value_String, Value_Number, Value_Date ");
-		sql.append("FROM T_Selection_InfoWindow ");
-		sql.append("WHERE AD_PInstance_ID=? ");
-		sql.append("ORDER BY T_Selection_ID, viewid, ColumnName ");
-		
-		PreparedStatement pstmt = null;
-		ResultSet rs = null;
-		try
-		{
-			pstmt = DB.prepareStatement(sql.toString(), trxName);
-			pstmt.setInt(1, pInstanceID);
-			rs = pstmt.executeQuery();
-			String currentRecordKey = null;
-			Map<Object, Object> selectedRow = null;
-			
-			while (rs.next()){
-				int keyColumn = rs.getInt(TSelectionInfoWindowColumn.ID.toString());
-				String keyUUColumn = rs.getString(TSelectionInfoWindowColumn.UUID.toString());
-				
-				String columnName = rs.getString(TSelectionInfoWindowColumn.COLUMN_NAME.toString());
-				String viewId = rs.getString(TSelectionInfoWindowColumn.VIEW_ID.toString());
-
-				Object strValue = rs.getObject(TSelectionInfoWindowColumn.VALUE_STR.toString());
-				Object numValue = rs.getObject(TSelectionInfoWindowColumn.VALUE_NUM.toString());
-				Object dateValue = rs.getObject(TSelectionInfoWindowColumn.VALUE_DATE.toString());
-				
-				String key = Integer.valueOf(keyColumn) + "_" + keyUUColumn + "_" + String.valueOf(viewId);
-				
-				Object value = null;
-				if (strValue != null)
-					value = strValue;
-				else if (numValue != null)
-					value = numValue;
-				else if (dateValue != null)
-					value = dateValue;
-				
-				if (currentRecordKey == null || !currentRecordKey.equals(key)) {
-					selectedRow = new HashMap<>();
-					selectionValueMap.put(key, selectedRow);
-					
-					currentRecordKey = key;
-					selectionValueMap.put(key, selectedRow);
-					
-					selectedRow.put(TSelectionInfoWindowColumn.ID, keyColumn);
-					selectedRow.put(TSelectionInfoWindowColumn.VIEW_ID, viewId);
-					selectedRow.put(TSelectionInfoWindowColumn.UUID, keyUUColumn);
-				}
-				
-				selectedRow.put(columnName, value);
-			}
-
-			return selectionValueMap;
-		}
-		catch (Exception e){
-			throw new AdempiereException(e);
-		}
-		finally{
-			DB.close(rs, pstmt);
-			rs = null;
-			pstmt = null;
-		}		
-	}
-
 	@Override
 	protected void prepare() {
 		// TODO Auto-generated method stub

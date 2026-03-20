@@ -10,12 +10,6 @@ Bundle-ClassPath: .
 Require-Capability: osgi.ee;filter:="(&(osgi.ee=JavaSE)(version>=17))"
 Bundle-RequiredExecutionEnvironment: JavaSE-17
 Require-Bundle: org.adempiere.ui.zk;bundle-version="12.0.0"
-Service-Component: OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationEventManager.xml,
- OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationFormFactory.xml,
- OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationModelFactory.xml,
- OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationProcessFactory.xml,
- OSGI-INF/za.co.ntier.payment.osgi.component.InfoPanelFactory.xml,
- OSGI-INF/za.co.ntier.payment.osgi.component.PaymentExportMappedByNameFactory.xml
 Import-Package: com.lowagie.text;version="[1.3.0,2.0.0)",
  org.adempiere.base,
  org.adempiere.base.annotation,
@@ -38,4 +32,11 @@ Import-Package: com.lowagie.text;version="[1.3.0,2.0.0)",
  org.osgi.service.event;version="[1.4.0,2.0.0)",
  org.zkoss.zk.ui;version="[10.0.0,11.0.0)",
  org.zkoss.zk.ui.event;version="[10.0.0,11.0.0)",
- org.zkoss.zul;version="[10.0.0,11.0.0)"
+ org.zkoss.zul;version="[10.0.0,11.0.0)",
+ za.co.ntier.api.util
+Service-Component: OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationEventManager.xml,
+ OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationFormFactory.xml,
+ OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationModelFactory.xml,
+ OSGI-INF/za.co.ntier.payment.osgi.component.AnnotationProcessFactory.xml,
+ OSGI-INF/za.co.ntier.payment.osgi.component.InfoPanelFactory.xml,
+ OSGI-INF/za.co.ntier.payment.osgi.component.PaymentExportMappedByNameFactory.xml
