@@ -1,0 +1,36 @@
+name: Trigger Central Build
+
+on:
+  push:
+    branches:
+      - prod
+      - main
+      - master
+      - ntier
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Determine Target Branch for Central Build
+        id: branch-mapping
+        run: |
+          # Map 'prod' to 'prod'
+          if [[ "${{ github.ref_name }}" == "prod" ]]; then
+            echo "target_branch=prod" >> "$GITHUB_OUTPUT"
+          
+          # Map 'main' or 'master' to 'main'
+          elif [[ "${{ github.ref_name }}" == "main" || "${{ github.ref_name }}" == "master" || "${{ github.ref_name }}" == "ntier" ]]; then
+            echo "target_branch=main" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Trigger Central Workflow via GitHub CLI
+        env:
+          # This uses the Organization secret you set up
+          GH_TOKEN: ${{ secrets.BUILD_TRIGGER_TOKEN }}
+        run: |
+          gh workflow run "Build For MQA" \
+            --repo "ntier-mqa/za.co.ntier.build" \
+            --ref "${{ steps.branch-mapping.outputs.target_branch }}" \
+            -f source_repo="${{ github.repository }}" \
+            -f source_branch="${{ github.ref_name }}"
