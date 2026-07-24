@@ -15,6 +15,7 @@ import org.adempiere.webui.window.SimplePDFViewer;
 import org.compiere.model.MPaySelectionCheck;
 import org.compiere.util.Env;
 import org.compiere.util.Msg;
+import org.zkoss.zul.Filedownload;
 
 @org.idempiere.ui.zk.annotation.Form(name = "org.compiere.apps.form.VPayPrint")
 public class WPayPrint extends org.adempiere.webui.apps.form.WPayPrint {
@@ -96,6 +97,75 @@ public class WPayPrint extends org.adempiere.webui.apps.form.WPayPrint {
 		}catch (Exception e){
 			log.log(Level.SEVERE, e.getLocalizedMessage(), e);
 			Dialog.error(m_WindowNo, Msg.getMsg(Env.getCtx(), "PaymentError"), e.getLocalizedMessage());
+		}
+	}
+	
+	@Override
+	protected void cmd_export()
+	{
+		if (fPaymentRule.getSelectedItem() == null)
+			return;
+		String PaymentRule = fPaymentRule.getSelectedItem().toValueNamePair().getValue();
+		if (!getChecks(PaymentRule))
+			return;
+
+		try
+		{
+			int no = 0;
+			StringBuffer err = new StringBuffer("");
+			if (m_PaymentExportClass == null || m_PaymentExportClass.trim().length() == 0)
+			{
+				m_PaymentExportClass = "org.compiere.util.GenericPaymentExport";
+			}
+
+			File tempFile = null;
+			String filenameForDownload = "";
+
+			no = loadPaymentExportClass(err);
+
+			if (no >= 0)
+			{
+				// Get File Info
+				tempFile = File.createTempFile(m_PaymentExport.getFilenamePrefix(), null);
+				no = m_PaymentExport.exportToFile(m_checks, (Boolean) fDepositBatch.getValue(), PaymentRule, tempFile, err);
+
+				// Append Payment Selection Name to the filename
+				String paySelectionName = "";
+				if (m_checks != null && m_checks.length > 0 && m_checks[0].getC_PaySelection() != null)
+				{
+					paySelectionName = "_" + m_checks[0].getC_PaySelection().getName();
+				}
+
+				filenameForDownload = m_PaymentExport.getFilenamePrefix() + paySelectionName + m_PaymentExport.getFilenameSuffix();
+			}
+
+			if (no >= 0)
+			{
+				Filedownload.save(new FileInputStream(tempFile), m_PaymentExport.getContentType(), filenameForDownload);
+				Dialog.info(m_WindowNo, "Saved",
+							Msg.getMsg(Env.getCtx(), "NoOfLines") + "=" + no);
+
+				Dialog.ask(m_WindowNo, "VPayPrintSuccess?", new Callback<Boolean>() {
+					@Override
+					public void onCallback(Boolean result)
+					{
+						if (result)
+						{
+							MPaySelectionCheck.confirmPrint(m_checks, m_batch, (Boolean) fDepositBatch.getValue());
+							// document No not updated
+						}
+					}
+				});
+			}
+			else
+			{
+				Dialog.error(m_WindowNo, "Error", err.toString());
+			}
+			dispose();
+		}
+		catch (Exception e)
+		{
+			log.log(Level.SEVERE, e.getLocalizedMessage(), e);
 		}
 	}
 }
